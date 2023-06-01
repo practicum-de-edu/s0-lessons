@@ -148,6 +148,9 @@ def get_playground():
 
     elif r.status_code == 400:
         tk.fail(f'Что-то пошло не так, сервер вернул ошибку {r.status_code}')
+    elif r.status_code == 401:
+        tk.fail('Не авторизованный доступ, выполните запуск `1. Вперёд, к '
+                'окружению/6. Как работает Docker-тренажёр/submit.py')
     elif r.status_code == 504:
         tk.fail('Пользователь не найден, сперва запустите `1. Вперёд, к '
                 'окружению/6. Как работает Docker-тренажёр/submit.py`')
