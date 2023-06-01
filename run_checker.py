@@ -174,9 +174,8 @@ def submit(task_path: str, checker: str, rlz_file: str = "realization.sql"):
         r = requests.post(
             f"{CHECK_SERVICE_HOST}/{API_PATH}/{checker}/",
             json={"student_id": 'st0', "student_solution": user_code},
-            headers=headers(),
-            timeout=300,
-        )
+            headers=headers()
+            )
 
     except Exception as e:
         tk.fail(e)
@@ -202,12 +201,3 @@ def healthcheck():
     except Exception as e:
         return e
     return r, r.content
-
-
-if __name__ == "__main__":
-    # print(f"{healthcheck() = }")
-    # print(f"{auth_user() = }")
-    # print(f"{create_playground() = }")
-    print(f"{get_playground() = }")
-
-    # # auth_user()
