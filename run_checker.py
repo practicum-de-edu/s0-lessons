@@ -62,7 +62,7 @@ class TerminalColors:
 
 def service_error(status_code, address):
     tk.fail('Что-то пошло не так, сервер вернул ошибку '
-            f'{status_code}\n{address}')
+            f'{status_code}\n{address}\nПовторите запрос через минуту.')
 
 
 tk = TerminalColors()
