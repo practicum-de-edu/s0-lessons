@@ -1,36 +1,41 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import sys
-import json
+import uuid
+from datetime import datetime
 
 import requests
 
 INVITE_TOKEN = os.getenv('INVITE_TOKEN')
 
 TOKEN_PATH = ".check_service_token"
+USERNAME_PATH = ".username"
 PUBLIC_CHECK_SERVICE_HOST = "https://de-sprint0-checks.sprint9.tgcloudenv.ru"
 CHECK_SERVICE_HOST = os.getenv("CHECK_SERVICE_HOST", PUBLIC_CHECK_SERVICE_HOST)
 API_PATH = "api/v1/checks"
+UN_PREFIX = "sp00_"
 
 
-class TokenRepository:
-    def __init__(self, token_path):
-        self.token_path = token_path
+class TokenOrUsernameRepository:
+    def __init__(self, file_path):
+        self.file_path = file_path
 
-    def get_token(self):
+    def get(self):
         try:
-            with open(self.token_path, "r") as f:
+            with open(self.file_path, "r") as f:
                 return f.read().strip()
         except FileNotFoundError:
             return None
 
-    def save_token(self, token):
-        with open(self.token_path, "w") as f:
+    def save(self, token):
+        with open(self.file_path, "w") as f:
             f.write(token)
 
 
-token_repository = TokenRepository(TOKEN_PATH)
+token_repository = TokenOrUsernameRepository(TOKEN_PATH)
+username_repository = TokenOrUsernameRepository(USERNAME_PATH)
 
 
 class TerminalColors:
@@ -69,15 +74,20 @@ tk = TerminalColors()
 
 
 def auth_user():
-    if token_repository.get_token():
-        return
+    username = username_repository.get()
+
+    if not username:
+        username = (f'{UN_PREFIX}'
+                    f'{datetime.now().strftime("%Y%m%d")}_'
+                    f'{uuid.uuid4().hex[:10]}')
+        username_repository.save(username)
 
     address = "api/v1/auth/token/"
 
     try:
         r = requests.post(
             f"{CHECK_SERVICE_HOST}/{address}",
-            data={"username": 'sp0user', "password": str(INVITE_TOKEN)},
+            data={"username": username, "password": str(INVITE_TOKEN)},
         )
 
     except Exception as e:
@@ -86,7 +96,7 @@ def auth_user():
         return
 
     if r.status_code == 200:
-        token_repository.save_token(r.json()["access_token"])
+        token_repository.save(r.json()["access_token"])
     elif r.status_code == 400:
         tk.fail("Не получилось создать пользователя")
     else:
@@ -94,7 +104,7 @@ def auth_user():
 
 
 def headers():
-    return {"Authorization": f"Bearer {token_repository.get_token()}"}
+    return {"Authorization": f"Bearer {token_repository.get()}"}
 
 
 def create_playground():
@@ -119,14 +129,17 @@ def create_playground():
         tk.header('Параметры подключения:')
         tk.ok(json.dumps(response, indent=1))
         tk.okcyan(message)
-
+        tk.ok('Подготовка БД выполняется около 1 - 10 минут, не выполняйте подключение к БД и отправку решений в течении 10 минут.')
     elif r.status_code == 400:
+        tk.warn(r.json())
+    elif r.status_code == 401:
         tk.warn(r.json()['message'])
     else:
         service_error(r.status_code, address)
 
 
 def get_playground():
+    auth_user()
     address = "api/v1/playgrounds/"
     try:
         r = requests.get(
@@ -147,7 +160,7 @@ def get_playground():
         tk.ok(json.dumps(response['student_db_connection'], indent=1))
 
     elif r.status_code == 400:
-        tk.fail(f'Что-то пошло не так, сервер вернул ошибку {r.status_code}')
+        tk.fail(f'Что-то пошло не так, сервер вернул ошибку {r.status_code}: {r.json()}')
     elif r.status_code == 401:
         tk.fail('Не авторизованный доступ, выполните запуск `1. Вперёд, к '
                 'окружению/6. Как работает Docker-тренажёр/submit.py')
@@ -173,7 +186,8 @@ def submit(task_path: str, checker: str, rlz_file: str = "realization.sql"):
     try:
         r = requests.post(
             f"{CHECK_SERVICE_HOST}/{API_PATH}/{checker}/",
-            json={"student_id": 'st0', "student_solution": user_code},
+            json={"student_id": username_repository.get(),
+                  "student_solution": user_code},
             headers=headers()
             )
 
