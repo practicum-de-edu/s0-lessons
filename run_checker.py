@@ -88,6 +88,7 @@ def auth_user():
         r = requests.post(
             f"{CHECK_SERVICE_HOST}/{address}",
             data={"username": username, "password": str(INVITE_TOKEN)},
+            verify=False
         )
 
     except Exception as e:
@@ -115,6 +116,7 @@ def create_playground():
         r = requests.post(
             f"{CHECK_SERVICE_HOST}/{address}",
             headers=headers(),
+            verify=False
         )
 
     except Exception as e:
@@ -145,6 +147,7 @@ def get_playground():
         r = requests.get(
             f"{CHECK_SERVICE_HOST}/{address}",
             headers=headers(),
+            verify=False
         )
 
     except Exception as e:
@@ -188,7 +191,8 @@ def submit(task_path: str, checker: str, rlz_file: str = "realization.sql"):
             f"{CHECK_SERVICE_HOST}/{API_PATH}/{checker}/",
             json={"student_id": username_repository.get(),
                   "student_solution": user_code},
-            headers=headers()
+            headers=headers(),
+            verify=False
             )
 
     except Exception as e:
@@ -210,7 +214,8 @@ def submit(task_path: str, checker: str, rlz_file: str = "realization.sql"):
 def healthcheck():
     checker = "api/v1/health/healthcheck"
     try:
-        r = requests.get(f"{CHECK_SERVICE_HOST}/{checker}")
+        r = requests.get(f"{CHECK_SERVICE_HOST}/{checker}",
+                         verify=False)
 
     except Exception as e:
         return e
